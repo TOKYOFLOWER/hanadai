@@ -729,23 +729,80 @@
       setTimeout(() => toast.classList.remove('show'), 2000);
     }
   </script>
+<!-- アクセスログ（セキュリティ強化版）-->
 <script>
 (function() {
   var LOG_URL = 'https://script.google.com/macros/s/AKfycbwxAtRrz4eGMGi1a-WFnMXzPbgMbpxZA34EgyKj-1hhwc0neK_PnKxif9WJwHGIlngAsQ/exec';
-  try {
-    fetch(LOG_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
+
+  // ── セッション管理 ──
+  var SESSION_KEY = 'hanadai_sid';
+  var COUNT_KEY = 'hanadai_cnt';
+  var sessionId = sessionStorage.getItem(SESSION_KEY);
+  if (!sessionId) {
+    sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+    sessionStorage.setItem(SESSION_KEY, sessionId);
+    sessionStorage.setItem(COUNT_KEY, '0');
+  }
+  var visitCount = parseInt(sessionStorage.getItem(COUNT_KEY) || '0', 10) + 1;
+  sessionStorage.setItem(COUNT_KEY, String(visitCount));
+
+  // ── ページ読込時間 ──
+  var loadTime = 0;
+  if (window.performance && performance.timing) {
+    window.addEventListener('load', function() {
+      loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+      sendLog();
+    });
+  } else {
+    sendLog();
+  }
+
+  // ── 簡易フィンガープリント ──
+  function getFingerprint() {
+    var raw = [
+      navigator.userAgent,
+      screen.width + 'x' + screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+      navigator.language,
+      navigator.hardwareConcurrency || 0,
+      navigator.cookieEnabled
+    ].join('|');
+    // 簡易ハッシュ
+    var hash = 0;
+    for (var i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  // ── ログ送信 ──
+  function sendLog() {
+    try {
+      var data = {
         page: location.href,
         referrer: document.referrer || '',
         userAgent: navigator.userAgent || '',
         screenSize: screen.width + 'x' + screen.height,
-        language: navigator.language || ''
-      })
-    });
-  } catch(e) {}
+        language: navigator.language || '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        touchSupport: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
+        cookieEnabled: navigator.cookieEnabled,
+        loadTime: loadTime || 0,
+        sessionId: sessionId,
+        visitCount: visitCount,
+        fingerprint: getFingerprint()
+      };
+
+      fetch(LOG_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(data)
+      });
+    } catch(e) {}
+  }
 })();
 </script>
 </body>
