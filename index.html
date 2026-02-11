@@ -729,6 +729,24 @@
       setTimeout(() => toast.classList.remove('show'), 2000);
     }
   </script>
-
+<script>
+(function() {
+  var LOG_URL = 'https://script.google.com/macros/s/AKfycbwxAtRrz4eGMGi1a-WFnMXzPbgMbpxZA34EgyKj-1hhwc0neK_PnKxif9WJwHGIlngAsQ/exec';
+  try {
+    fetch(LOG_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        page: location.href,
+        referrer: document.referrer || '',
+        userAgent: navigator.userAgent || '',
+        screenSize: screen.width + 'x' + screen.height,
+        language: navigator.language || ''
+      })
+    });
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>
