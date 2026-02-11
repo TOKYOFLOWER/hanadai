@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>花代算出ツール</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --card: #ffffff;
+      --primary: #2d5a3d;
+      --primary-light: #e8f0eb;
+      --primary-dark: #1a3d28;
+      --accent: #c45c6a;
+      --accent-light: #fdf0f2;
+      --text: #2c2c2c;
+      --text-muted: #8a8a82;
+      --border: #e5e2da;
+      --shadow: 0 2px 16px rgba(45, 90, 61, 0.08);
+      --shadow-lg: 0 8px 32px rgba(45, 90, 61, 0.12);
+      --radius: 14px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--primary);
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header h1::before {
+      content: '✿';
+      font-size: 20px;
+      opacity: 0.8;
+    }
+
+    .btn-settings {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.2s;
+    }
+
+    .btn-settings:active {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* ── Main Container ── */
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* ── Input Card ── */
+    .input-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px 20px;
+      margin-bottom: 12px;
+    }
+
+    .input-label {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .yen-prefix {
+      font-family: 'DM Mono', monospace;
+      font-size: 28px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .order-input {
+      flex: 1;
+      font-family: 'DM Mono', monospace;
+      font-size: 36px;
+      font-weight: 500;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      width: 100%;
+      padding: 4px 0;
+      border-bottom: 2px solid var(--border);
+      transition: border-color 0.2s;
+    }
+
+    .order-input:focus {
+      border-bottom-color: var(--primary);
+    }
+
+    .order-input::placeholder {
+      color: #d0cec8;
+    }
+
+    /* Tax toggle */
+    .tax-toggle {
+      display: flex;
+      margin-top: 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 3px;
+    }
+
+    .tax-toggle button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 10px 0;
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .tax-toggle button.active {
+      background: var(--card);
+      color: var(--primary-dark);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    /* ── Result Card ── */
+    .result-card {
+      background: var(--primary);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 28px 24px;
+      margin-bottom: 12px;
+      text-align: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+
+    .result-label {
+      font-size: 13px;
+      font-weight: 300;
+      opacity: 0.75;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .result-amount {
+      font-family: 'DM Mono', monospace;
+      font-size: 48px;
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .result-amount .yen {
+      font-size: 28px;
+      opacity: 0.7;
+      margin-right: 2px;
+    }
+
+    .result-amount.negative {
+      color: #ffb3b3;
+    }
+
+    .result-note {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-top: 8px;
+    }
+
+    /* ── Breakdown Card ── */
+    .breakdown-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+
+    .breakdown-title {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .breakdown-row + .breakdown-row {
+      border-top: 1px dashed #eee;
+    }
+
+    .breakdown-row .label {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .breakdown-row .label small {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .breakdown-row .value {
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .breakdown-row .value.minus {
+      color: var(--accent);
+    }
+
+    .breakdown-row .value.minus::before {
+      content: '−';
+      margin-right: 1px;
+    }
+
+    .breakdown-divider {
+      height: 1px;
+      background: var(--primary);
+      opacity: 0.2;
+      margin: 6px 0;
+    }
+
+    .breakdown-row.total .label {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .breakdown-row.total .value {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    /* ── Settings Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.show {
+      display: block;
+      opacity: 1;
+    }
+
+    .modal {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-radius: 20px 20px 0 0;
+      z-index: 201;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 85dvh;
+      overflow-y: auto;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .modal.show {
+      transform: translateY(0);
+    }
+
+    .modal-handle {
+      width: 36px;
+      height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      margin: 10px auto 0;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+    }
+
+    .modal-header h2 {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .btn-close {
+      background: var(--bg);
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      color: var(--text-muted);
+    }
+
+    .modal-body {
+      padding: 0 20px 24px;
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .setting-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .setting-input {
+      flex: 1;
+      font-family: 'DM Mono', monospace;
+      font-size: 18px;
+      font-weight: 500;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+
+    .setting-input:focus {
+      border-color: var(--primary);
+    }
+
+    .setting-unit {
+      font-size: 15px;
+      color: var(--text-muted);
+      min-width: 24px;
+    }
+
+    .btn-save {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-save:active {
+      opacity: 0.8;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--primary-dark);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 300;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .empty-state .icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    /* ── Animation ── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card, .breakdown-card {
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>花代算出ツール</h1>
+    <button class="btn-settings" onclick="openSettings()" aria-label="設定">⚙</button>
+  </div>
+
+  <div class="container">
+
+    <!-- Input -->
+    <div class="input-card">
+      <label class="input-label">注文金額を入力</label>
+      <div class="input-row">
+        <span class="yen-prefix">¥</span>
+        <input
+          type="number"
+          class="order-input"
+          id="orderAmount"
+          inputmode="numeric"
+          placeholder="0"
+          oninput="calculate()"
+        >
+      </div>
+      <div class="tax-toggle">
+        <button id="btnTaxIn" class="active" onclick="setTax(true)">税込</button>
+        <button id="btnTaxEx" onclick="setTax(false)">税抜</button>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div id="resultArea">
+      <div class="empty-state">
+        <div class="icon">🌸</div>
+        注文金額を入力すると<br>花代が自動計算されます
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeSettings()"></div>
+  <div class="modal" id="settingsModal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2>⚙ 設定</h2>
+      <button class="btn-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-group">
+        <label class="setting-label">消費税率</label>
+        <div class="setting-input-row">
+          <input type="number" class="setting-input" id="setTaxRate" inputmode="decimal" step="0.1">
+          <span class="setting-unit">%</span>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">手数料率（税込金額に対して）</label>
+        <div class="setting-input-row">
+          <input type="number" class="setting-input" id="setCommission" inputmode="decimal" step="0.1">
+          <span class="setting-unit">%</span>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">送料</label>
+        <div class="setting-input-row">
+          <input type="number" class="setting-input" id="setShipping" inputmode="numeric">
+          <span class="setting-unit">円</span>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">箱代・資材費</label>
+        <div class="setting-input-row">
+          <input type="number" class="setting-input" id="setBoxCost" inputmode="numeric">
+          <span class="setting-unit">円</span>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSettingsUI()">設定を保存</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── State ──
+    let isTaxIncluded = true;
+    let settings = {
+      taxRate: 10,
+      commissionRate: 10,
+      shippingCost: 1100,
+      boxCost: 300
+    };
+
+    // ── Init ──
+    window.addEventListener('DOMContentLoaded', () => {
+      google.script.run
+        .withSuccessHandler(s => {
+          settings = s;
+          populateSettings();
+        })
+        .withFailureHandler(() => populateSettings())
+        .getSettings();
+
+      document.getElementById('orderAmount').focus();
+    });
+
+    // ── Tax Toggle ──
+    function setTax(included) {
+      isTaxIncluded = included;
+      document.getElementById('btnTaxIn').classList.toggle('active', included);
+      document.getElementById('btnTaxEx').classList.toggle('active', !included);
+      calculate();
+    }
+
+    // ── Calculate ──
+    function calculate() {
+      const input = document.getElementById('orderAmount');
+      const resultArea = document.getElementById('resultArea');
+      const amount = parseInt(input.value, 10);
+
+      if (!amount || amount <= 0) {
+        resultArea.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🌸</div>
+            注文金額を入力すると<br>花代が自動計算されます
+          </div>`;
+        return;
+      }
+
+      // ローカル計算（即時表示のため）
+      const taxRate = settings.taxRate / 100;
+      const commissionRate = settings.commissionRate / 100;
+      const shippingCost = Number(settings.shippingCost);
+      const boxCost = Number(settings.boxCost);
+
+      let taxInc, taxExc;
+      if (isTaxIncluded) {
+        taxInc = amount;
+        taxExc = Math.floor(amount / (1 + taxRate));
+      } else {
+        taxExc = amount;
+        taxInc = Math.floor(amount * (1 + taxRate));
+      }
+
+      const commission = Math.ceil(taxInc * commissionRate);
+      const afterCommission = taxExc - commission;
+      const flowerCost = afterCommission - shippingCost - boxCost;
+
+      const isNeg = flowerCost < 0;
+
+      resultArea.innerHTML = `
+        <div class="result-card">
+          <div class="result-label">花に使える金額</div>
+          <div class="result-amount ${isNeg ? 'negative' : ''}">
+            <span class="yen">¥</span>${formatNum(flowerCost)}
+          </div>
+          ${isNeg ? '<div class="result-note">⚠ 経費が注文金額を超えています</div>' : ''}
+        </div>
+        <div class="breakdown-card">
+          <div class="breakdown-title">計算内訳</div>
+          <div class="breakdown-row">
+            <span class="label">注文金額 <small>${isTaxIncluded ? '税込' : '税抜'}</small></span>
+            <span class="value">¥${formatNum(amount)}</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="label">① 税抜金額</span>
+            <span class="value">¥${formatNum(taxExc)}</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="label">② 手数料 <small>${settings.commissionRate}%</small></span>
+            <span class="value minus">¥${formatNum(commission)}</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="label">③ 送料</span>
+            <span class="value minus">¥${formatNum(shippingCost)}</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="label">③ 箱代・資材費</span>
+            <span class="value minus">¥${formatNum(boxCost)}</span>
+          </div>
+          <div class="breakdown-divider"></div>
+          <div class="breakdown-row total">
+            <span class="label">花代</span>
+            <span class="value">¥${formatNum(flowerCost)}</span>
+          </div>
+        </div>`;
+    }
+
+    // ── Number Formatter ──
+    function formatNum(n) {
+      return Math.abs(n).toLocaleString('ja-JP');
+    }
+
+    // ── Settings UI ──
+    function populateSettings() {
+      document.getElementById('setTaxRate').value = settings.taxRate;
+      document.getElementById('setCommission').value = settings.commissionRate;
+      document.getElementById('setShipping').value = settings.shippingCost;
+      document.getElementById('setBoxCost').value = settings.boxCost;
+    }
+
+    function openSettings() {
+      populateSettings();
+      document.getElementById('modalOverlay').classList.add('show');
+      document.getElementById('settingsModal').classList.add('show');
+    }
+
+    function closeSettings() {
+      document.getElementById('modalOverlay').classList.remove('show');
+      document.getElementById('settingsModal').classList.remove('show');
+    }
+
+    function saveSettingsUI() {
+      settings = {
+        taxRate: parseFloat(document.getElementById('setTaxRate').value) || 10,
+        commissionRate: parseFloat(document.getElementById('setCommission').value) || 10,
+        shippingCost: parseInt(document.getElementById('setShipping').value, 10) || 0,
+        boxCost: parseInt(document.getElementById('setBoxCost').value, 10) || 0
+      };
+
+      google.script.run
+        .withSuccessHandler(() => {
+          closeSettings();
+          calculate();
+          showToast('設定を保存しました');
+        })
+        .withFailureHandler((e) => {
+          showToast('保存に失敗しました');
+          console.error(e);
+        })
+        .saveSettings(settings);
+    }
+
+    // ── Toast ──
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+  </script>
+
+</body>
+</html>
